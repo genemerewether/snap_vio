@@ -97,7 +97,7 @@ SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
 
   vio_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("vio/pose",1);
   vio_odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("vio/odometry",1);
-  vio_state_update_publisher_ = nh_.advertise<mav_msgs::ImuStateUpdate>("odometry_0",1);
+  vio_state_update_publisher_ = nh_.advertise<mav_msgs::ImuStateUpdate>("imu_state_update",1);
   vio_states_publisher_ = nh_.advertise<snap_msgs::InternalStates>("vio/internal_states",1);
   vio_points_publisher_ = nh_.advertise<snap_msgs::MapPointArray>("vio/map_points",1);
   vio_cloud_publisher_ = nh_.advertise<sensor_msgs::PointCloud>("vio/point_cloud",1);
@@ -455,6 +455,10 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
                              ros::Time vio_timestamp) {
   std::vector<geometry_msgs::TransformStamped> transforms;
 
+  tf2::Transform odom_to_imu;
+  tf2::Transform temp;
+  odom_to_imu.setIdentity();
+  
   if(!snav_mode_)
   {
     geometry_msgs::TransformStamped odom_to_grav;
@@ -467,6 +471,9 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
     odom_to_grav.header.frame_id = "odom";
     odom_to_grav.header.stamp = vio_timestamp;
     transforms.push_back(odom_to_grav);
+
+    tf2::fromMsg(odom_to_grav.transform, temp);
+    odom_to_imu *= temp;
   }
 
   geometry_msgs::TransformStamped grav_to_imu_start;
@@ -486,6 +493,9 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
     tf2::convert(q_grav,grav_to_imu_start.transform.rotation);
     grav_to_imu_start.child_frame_id = "imu_start";
     grav_to_imu_start.header.frame_id = "grav";
+    
+    tf2::fromMsg(grav_to_imu_start.transform, temp);
+    odom_to_imu *= temp;
   }
   grav_to_imu_start.header.stamp = vio_timestamp;
   transforms.push_back(grav_to_imu_start);
@@ -543,6 +553,9 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   else
   {
     transforms.push_back(imu_start_to_imu);
+    
+    tf2::fromMsg(imu_start_to_imu.transform, temp);
+    odom_to_imu *= temp;
   }
 
   // If running in snav_mode, reverse some transforms:
@@ -557,6 +570,34 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
 
   //Send all the transforms
   tf_broadcaster_.sendTransform(transforms);
+
+  mav_msgs::ImuStateUpdate update_msg;
+  update_msg.header.stamp = vio_timestamp;
+  update_msg.header.frame_id = "odom";
+  update_msg.child_frame_id = "imu";
+  
+  tf2::toMsg(odom_to_imu, update_msg.pose.pose);
+  update_msg.twist.twist.linear.x = vio_pose.velocity[0];
+  update_msg.twist.twist.linear.y = vio_pose.velocity[1];
+  update_msg.twist.twist.linear.z = vio_pose.velocity[2];
+  update_msg.twist.twist.angular.x = vio_pose.angularVelocity[0];
+  update_msg.twist.twist.angular.y = vio_pose.angularVelocity[1];
+  update_msg.twist.twist.angular.z = vio_pose.angularVelocity[2];
+  //set the error covariance for the pose.
+  //initialize twist covariance to zeros.
+  for( int16_t i = 0; i < 6; i++ ) {
+    for( int16_t j = 0; j < 6; j++ ) {
+      update_msg.pose.covariance[ i*6 + j ] = vio_pose.errCovPose[i][j];
+      update_msg.twist.covariance[ i*6 + j ] = 0.0;
+    }
+  }
+  //set the error covariance for the velocity.
+  for( int16_t i = 0; i < 3; i++ ) {
+    for( int16_t j = 0; j < 3; j++ ) {
+      update_msg.twist.covariance[ i*6 + j ] = vio_pose.errCovVelocity[i][j];
+    }
+  }
+  vio_state_update_publisher_.publish(update_msg);
 
   nav_msgs::Odometry odom_msg;
   odom_msg.header.stamp = vio_timestamp;
