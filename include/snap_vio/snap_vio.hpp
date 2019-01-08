@@ -43,6 +43,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Point32.h>
 #include <nav_msgs/Odometry.h>
+#include <mav_msgs/ImuStateUpdate.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud.h>
@@ -119,6 +120,8 @@ private:
   void PublishMapPoints(std::vector<mvVISLAMMapPoint>& vio_points, int64_t vio_frame_id,
                       ros::Time image_timestamp);
 
+  void ImuCallback(const sensor_msgs::ImuConstPtr& msg);
+  
   void ImuRawCallback(const snap_msgs::ImuArrayConstPtr& msg);
 
   void SyncedCallback(const sensor_msgs::ImageConstPtr& msg,
@@ -129,11 +132,13 @@ private:
   tf2_ros::TransformBroadcaster tf_broadcaster_;
   ros::Publisher vio_pose_publisher_;
   ros::Publisher vio_odom_publisher_;
+  ros::Publisher vio_state_update_publisher_;
   ros::Publisher vio_states_publisher_;
   ros::Publisher vio_points_publisher_;
   ros::Publisher vio_cloud_publisher_;
 
   ros::Subscriber imu_raw_subscriber_;
+  ros::Subscriber imu_subscriber_;
   ros::Subscriber cinfo_subscriber_;
 
   //public namespace nodehandle

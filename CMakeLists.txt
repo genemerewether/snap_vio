@@ -47,6 +47,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   tf2_ros
   nodelet
+  mav_msgs
 )
 
 catkin_package(
@@ -61,6 +62,7 @@ catkin_package(
     nav_msgs
     tf2_ros
     nodelet
+    mav_msgs
   LIBRARIES snap_vio_nodelet
 )
 

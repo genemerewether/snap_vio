@@ -97,11 +97,13 @@ SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
 
   vio_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("vio/pose",1);
   vio_odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("vio/odometry",1);
+  vio_state_update_publisher_ = nh_.advertise<mav_msgs::ImuStateUpdate>("odometry_0",1);
   vio_states_publisher_ = nh_.advertise<snap_msgs::InternalStates>("vio/internal_states",1);
   vio_points_publisher_ = nh_.advertise<snap_msgs::MapPointArray>("vio/map_points",1);
   vio_cloud_publisher_ = nh_.advertise<sensor_msgs::PointCloud>("vio/point_cloud",1);
 
   imu_raw_subscriber_ = nh_.subscribe("imu_raw_array", 1000, &SnapVio::ImuRawCallback, this);
+  imu_subscriber_ = nh_.subscribe("imu_0", 1000, &SnapVio::ImuCallback, this);
   cinfo_subscriber_ = nh_.subscribe("camera_info", 5, &SnapVio::CameraInfoCallback, this);
 
   sync.registerCallback( boost::bind( &SnapVio::SyncedCallback, this, _1, _2 ) );
@@ -168,6 +170,44 @@ void SnapVio::SyncedCallback(const sensor_msgs::ImageConstPtr& msg,
   std::vector<mvVISLAMMapPoint> map_points(num_points, {0});
   int num_received = mvVISLAM_GetPointCloud(vislam_ptr_, map_points.data(), num_points);
   PublishMapPoints(map_points, msg->header.seq, expo_msg->center_of_exposure);
+}
+
+void SnapVio::ImuCallback(const sensor_msgs::ImuConstPtr& msg) {
+  if(!got_imu_frame_id_){
+    imu_frame_ = msg->header.frame_id;
+    got_imu_frame_id_ = true;
+  }
+
+  // Wait for the camera to start up before we do anything
+  if (no_frames_yet_) {
+    return;
+  }
+
+  static uint32_t sequence_number_last = 0;
+  if (sequence_number_last != 0)
+  {
+    // The diff should be 1, anything greater means we dropped samples
+    if (msg->header.seq - sequence_number_last != 1) {
+      ROS_ERROR_STREAM("[VISLAM] Dropped IMU samples current: " << msg->header.seq <<
+                       ", last: " << sequence_number_last);
+    }
+  }
+  sequence_number_last = msg->header.seq;
+
+  int64_t imu_timestamp_ns = msg->header.stamp.toNSec();
+
+  mvVISLAM_AddAccel(vislam_ptr_, imu_timestamp_ns,
+                    msg->linear_acceleration.x,
+                    msg->linear_acceleration.y,
+                    msg->linear_acceleration.z);
+  mvVISLAM_AddGyro(vislam_ptr_, imu_timestamp_ns,
+                   msg->angular_velocity.x,
+                   msg->angular_velocity.y,
+                   msg->angular_velocity.z);
+
+  // Record the latest timestamp
+  // This is used to verify that all IMU samples up to the image have arrived
+  latest_imu_timestamp_ = msg->header.stamp;
 }
 
 void SnapVio::ImuRawCallback(const snap_msgs::ImuArrayConstPtr& msg) {

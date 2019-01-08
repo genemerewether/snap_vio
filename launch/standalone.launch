@@ -37,6 +37,9 @@
 <launch>
   <arg name="8074" default="true"/>
 
+  <remap from="/downward/imu_0" to="/imu_0"/>
+  <remap from="/downward/odometry_0" to="/odometry_0"/>
+  
   <group ns="downward">
     <node pkg="nodelet" type="nodelet" name="vio_nodelet_man" args="manager" output="screen"/>
 
