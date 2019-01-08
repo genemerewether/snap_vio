@@ -66,11 +66,6 @@
     <!-- fisheye camera info spoofer -->
     <include file="$(find snap_vio)/launch/fisheye_camera_info.launch"/>
 
-    <!-- imu nodelet -->
-    <node pkg="nodelet" type="nodelet" name="snap_imu_nodelet"
-          args="load snap_imu/driver vio_nodelet_man" output="screen">
-    </node>
-
     <!-- cpa nodelet -->
     <node pkg="nodelet" type="nodelet" name="snap_cpa_nodelet"
           args="load snap_cpa/driver vio_nodelet_man" output="screen">
