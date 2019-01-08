@@ -575,6 +575,10 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   update_msg.header.stamp = vio_timestamp;
   update_msg.header.frame_id = "odom";
   update_msg.child_frame_id = "imu";
+
+  tf2::Quaternion q_NED_ENU( tf2::Vector3(1.0, 0.0, 0.0), 3.14159);
+  tf2::Transform x_NED_ENU(q_NED_ENU);
+  odom_to_imu *= x_NED_ENU;
   
   tf2::toMsg(odom_to_imu, update_msg.pose.pose);
   update_msg.twist.twist.linear.x = vio_pose.velocity[0];
