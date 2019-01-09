@@ -53,7 +53,7 @@ SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
 
   pnh_.param("snav_mode", snav_mode_, false);
 
-  pnh_.param("noInitWhenMoving",    vislam_params_.noInitWhenMoving,    true);
+  pnh_.param("noInitWhenMoving",    vislam_params_.noInitWhenMoving,    false);
   pnh_.param("limitedIMUbWtrigger", vislam_params_.limitedIMUbWtrigger, 200.0f);
   pnh_.param("gpsImuTimeAlignment", vislam_params_.gpsImuTimeAlignment, 0.0f);
   pnh_.param("readoutTime",         vislam_params_.readoutTime,         0.0f);
@@ -587,6 +587,12 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   update_msg.twist.twist.angular.x = vio_pose.angularVelocity[0];
   update_msg.twist.twist.angular.y = vio_pose.angularVelocity[1];
   update_msg.twist.twist.angular.z = vio_pose.angularVelocity[2];
+  update_msg.angular_velocity_bias.x = vio_pose.wBias[0];
+  update_msg.angular_velocity_bias.y = vio_pose.wBias[1];
+  update_msg.angular_velocity_bias.z = vio_pose.wBias[2];
+  update_msg.linear_acceleration_bias.x = vio_pose.aBias[0];
+  update_msg.linear_acceleration_bias.y = vio_pose.aBias[1];
+  update_msg.linear_acceleration_bias.z = vio_pose.aBias[2];
   //set the error covariance for the pose.
   //initialize twist covariance to zeros.
   for( int16_t i = 0; i < 6; i++ ) {
