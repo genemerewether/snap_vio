@@ -148,16 +148,7 @@ private:
   ros::NodeHandle pnh_;
 
   image_transport::ImageTransport im_trans_;
-  typedef image_transport::SubscriberFilter ImageSubscriber;
-  ImageSubscriber img_sub_;
-
-  typedef message_filters::sync_policies::ExactTime<
-    sensor_msgs::Image, 
-    snap_msgs::ExposureTimes
-    > ExpoSyncPolicy;
-
-  message_filters::Subscriber<snap_msgs::ExposureTimes> expo_sub_;
-  message_filters::Synchronizer< ExpoSyncPolicy > sync;
+  image_transport::Subscriber img_sub_;
 
   ros::Time latest_imu_timestamp_;
   ros::Duration latest_time_alignment_;

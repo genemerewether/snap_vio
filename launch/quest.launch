@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="8074" default="true"/>
+  <!-- VIO node -->
+  <node pkg="snap_vio" type="snap_vio" name="snap_vio_node" output="screen">
+    <remap from="camera_info" to="fisheye/camera_info"/>
+
+    <param name="delta" value="-0.0068"  if="$(arg 8074)"/>
+    <param name="delta" value=".002" unless="$(arg 8074)"/>
+  </node>
+
+  <!-- fisheye camera info spoofer -->
+  <include file="$(find snap_vio)/launch/fisheye_camera_info.launch"/>
+
+  <!-- Board/Vehicle URDF -->
+  <include file="$(find qflight_descriptions)/launch/qflight_robot.launch">
+    <arg name="board" value="sdf" if="$(arg 8074)"/>
+    <arg name="board" value="sdf_pro" unless="$(arg 8074)"/>
+
+    <arg name="vehicle" value="none"/>
+    <!--arg name="vehicle" value="ugv_example"/-->
+
+    <arg name="imu_is_root_tf" value="true"/>    
+  </include>  
+</launch>

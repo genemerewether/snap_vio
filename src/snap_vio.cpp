@@ -36,10 +36,7 @@
 SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
   : nh_(nh),
     pnh_(pnh),
-    im_trans_(nh_),
-    img_sub_(im_trans_, "image_raw", 1),
-    expo_sub_(nh_, "exposure_times", 1),
-    sync( ExpoSyncPolicy( 10 ), img_sub_, expo_sub_ )
+    im_trans_(nh_)
 {
   running_ = false;
   initialized_ = false;
@@ -106,7 +103,7 @@ SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
   imu_subscriber_ = nh_.subscribe("imu_0", 1000, &SnapVio::ImuCallback, this);
   cinfo_subscriber_ = nh_.subscribe("camera_info", 5, &SnapVio::CameraInfoCallback, this);
 
-  sync.registerCallback( boost::bind( &SnapVio::SyncedCallback, this, _1, _2 ) );
+  img_sub_ = im_trans_.subscribe("image_raw", 1, &SnapVio::SyncedCallback, this);
 }
 
 
@@ -130,8 +127,7 @@ void SnapVio::Stop() {
   running_=false;
 }
 
-void SnapVio::SyncedCallback(const sensor_msgs::ImageConstPtr& msg,
-                             const snap_msgs::ExposureTimesConstPtr& expo_msg)
+void SnapVio::SyncedCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
   if (!initialized_) {
@@ -157,19 +153,19 @@ void SnapVio::SyncedCallback(const sensor_msgs::ImageConstPtr& msg,
 
   // TODO: smarter blocking here / is this necessary in newest MV?
   // Now wait for IMU samples to catch up
-  while (latest_imu_timestamp_ < (expo_msg->center_of_exposure + latest_time_alignment_)) {
+  while (latest_imu_timestamp_ < (msg->header.stamp + latest_time_alignment_)) {
     ros::Duration(0.001).sleep();
   }
 
   // Process and publish
-  mvVISLAM_AddImage(vislam_ptr_, expo_msg->center_of_exposure.toNSec(), &msg->data[0]);
+  mvVISLAM_AddImage(vislam_ptr_, msg->header.stamp.toNSec(), &msg->data[0]);
   mvVISLAMPose pose = mvVISLAM_GetPose(vislam_ptr_);
-  PublishVioData(pose, msg->header.seq, expo_msg->center_of_exposure);
+  PublishVioData(pose, msg->header.seq, msg->header.stamp);
 
   int num_points = mvVISLAM_HasUpdatedPointCloud(vislam_ptr_);
   std::vector<mvVISLAMMapPoint> map_points(num_points, {0});
   int num_received = mvVISLAM_GetPointCloud(vislam_ptr_, map_points.data(), num_points);
-  PublishMapPoints(map_points, msg->header.seq, expo_msg->center_of_exposure);
+  PublishMapPoints(map_points, msg->header.seq, msg->header.stamp);
 }
 
 void SnapVio::ImuCallback(const sensor_msgs::ImuConstPtr& msg) {
