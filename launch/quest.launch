@@ -2,7 +2,7 @@
 <launch>
   <arg name="8074" default="true"/>
   <!-- VIO node -->
-  <node pkg="snap_vio" type="snap_vio" name="snap_vio_node" output="screen">
+  <node pkg="snap_vio" type="snap_vio_node" name="mvvislam" output="screen">
     <remap from="camera_info" to="fisheye/camera_info"/>
 
     <param name="delta" value="-0.0068"  if="$(arg 8074)"/>
