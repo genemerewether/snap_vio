@@ -125,8 +125,7 @@ private:
   
   void ImuRawCallback(const snap_msgs::ImuArrayConstPtr& msg);
 
-  void SyncedCallback(const sensor_msgs::ImageConstPtr& msg,
-                      const snap_msgs::ExposureTimesConstPtr& exp_msg);
+  void SyncedCallback(const sensor_msgs::ImageConstPtr& msg);
 
   void CameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg);
 
