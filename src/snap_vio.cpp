@@ -100,7 +100,7 @@ SnapVio::SnapVio(ros::NodeHandle nh, ros::NodeHandle pnh)
   vio_cloud_publisher_ = nh_.advertise<sensor_msgs::PointCloud>("vio/point_cloud",1);
 
   imu_raw_subscriber_ = nh_.subscribe("imu_raw_array", 1000, &SnapVio::ImuRawCallback, this);
-  imu_subscriber_ = nh_.subscribe("imu_0", 1000, &SnapVio::ImuCallback, this);
+  imu_subscriber_ = nh_.subscribe("imu_0", 10000, &SnapVio::ImuCallback, this);
   cinfo_subscriber_ = nh_.subscribe("camera_info", 5, &SnapVio::CameraInfoCallback, this);
 
   img_sub_ = im_trans_.subscribe("image_raw", 1, &SnapVio::SyncedCallback, this);
@@ -572,9 +572,9 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   update_msg.header.frame_id = "odom";
   update_msg.child_frame_id = "imu";
 
-  tf2::Quaternion q_NED_ENU( tf2::Vector3(1.0, 0.0, 0.0), 3.14159);
+  /*tf2::Quaternion q_NED_ENU( tf2::Vector3(1.0, 0.0, 0.0), 3.14159);
   tf2::Transform x_NED_ENU(q_NED_ENU);
-  odom_to_imu *= x_NED_ENU;
+  odom_to_imu *= x_NED_ENU;*/
   
   tf2::toMsg(odom_to_imu, update_msg.pose.pose);
   update_msg.twist.twist.linear.x = vio_pose.velocity[0];
