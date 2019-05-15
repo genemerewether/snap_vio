@@ -477,6 +477,9 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   }
 
   geometry_msgs::TransformStamped grav_to_imu_start;
+  grav_to_imu_start.transform.translation.x = 0;
+  grav_to_imu_start.transform.translation.y = 0;
+  grav_to_imu_start.transform.translation.z = 0;
   tf2::Vector3 grav(vio_pose.gravity[0],
                     vio_pose.gravity[1],
                     vio_pose.gravity[2]);
@@ -500,6 +503,14 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   grav_to_imu_start.header.stamp = vio_timestamp;
   transforms.push_back(grav_to_imu_start);
 
+  // NOTE(Mereweth) - odom_to_imu is odom_to_imu-start (MV spatial) here,
+  // and velocity is expressed in MV spatial, so this is correct to get
+  // to odom frame
+  tf2::Vector3 velocity_in_grav_aligned(vio_pose.velocity[0],
+                                        vio_pose.velocity[1],
+                                        vio_pose.velocity[2]);
+  velocity_in_grav_aligned = odom_to_imu * velocity_in_grav_aligned;
+  
   geometry_msgs::PoseStamped pose_msg;
   pose_msg.header.frame_id = "imu_start";
   pose_msg.header.stamp = vio_timestamp;
@@ -575,15 +586,8 @@ void SnapVio::PublishVioData(mvVISLAMPose& vio_pose, int64_t vio_frame_id,
   update_msg.header.stamp = vio_timestamp;
   update_msg.header.frame_id = "odom";
   update_msg.child_frame_id = "imu";
-
-  tf2::Quaternion q_NED_ENU( tf2::Vector3(1.0, 0.0, 0.0), 3.14159);
-  tf2::Transform x_NED_ENU(q_NED_ENU);
-  odom_to_imu *= x_NED_ENU;
-  
   tf2::toMsg(odom_to_imu, update_msg.pose.pose);
-  update_msg.twist.twist.linear.x = vio_pose.velocity[0];
-  update_msg.twist.twist.linear.y = vio_pose.velocity[1];
-  update_msg.twist.twist.linear.z = vio_pose.velocity[2];
+  update_msg.twist.twist.linear = tf2::toMsg(velocity_in_grav_aligned);
   update_msg.twist.twist.angular.x = vio_pose.angularVelocity[0];
   update_msg.twist.twist.angular.y = vio_pose.angularVelocity[1];
   update_msg.twist.twist.angular.z = vio_pose.angularVelocity[2];
