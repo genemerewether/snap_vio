@@ -46,7 +46,6 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   tf2_ros
-  nodelet
   mav_msgs
 )
 
@@ -61,9 +60,7 @@ catkin_package(
     geometry_msgs
     nav_msgs
     tf2_ros
-    nodelet
     mav_msgs
-  LIBRARIES snap_vio_nodelet
 )
 
 ###########
@@ -87,14 +84,6 @@ target_link_libraries(snap_vio
 add_executable(snap_vio_node src/snap_vio_node.cpp)
 add_dependencies(snap_vio_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(snap_vio_node
-  ${catkin_LIBRARIES}
-  snap_vio
-)
-
-add_library(snap_vio_nodelet src/snap_vio_nodelet.cpp)
-add_dependencies(snap_vio_nodelet ${catkin_EXPORTED_TARGETS})
-target_link_libraries(snap_vio_nodelet
-  ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
   snap_vio
 )
@@ -150,12 +139,9 @@ install(DIRECTORY launch
 
 ## Mark executables and/or libraries for installation
 install(TARGETS
-  snap_vio snap_vio_nodelet
+  snap_vio
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(FILES snap_vio_nodelet.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
